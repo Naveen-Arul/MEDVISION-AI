@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 215 25% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    --primary: 210 80% 48%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 50% 95%;
+    --secondary-foreground: 215 25% 15%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 15% 45%;
+
+    --accent: 195 85% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 210 30% 88%;
+    --input: 210 30% 88%;
+    --ring: 210 80% 48%;
+
+    --radius: 0.75rem;
+
+    --medical-blue: 210 80% 48%;
+    --medical-blue-light: 210 70% 92%;
+    --medical-blue-dark: 210 85% 35%;
+    --medical-green: 142 71% 45%;
+    --medical-red: 0 72% 51%;
+    --medical-orange: 38 92% 50%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(210 80% 48%) 0%, hsl(195 85% 45%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(210 40% 98%) 0%, hsl(0 0% 100%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(210 85% 35%) 0%, hsl(210 80% 48%) 50%, hsl(195 85% 45%) 100%);
+
+    --shadow-card: 0 2px 8px hsl(210 30% 15% / 0.08);
+    --shadow-elevated: 0 8px 24px hsl(210 30% 15% / 0.12);
+    --shadow-medical: 0 4px 16px hsl(210 80% 48% / 0.15);
+
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark {
+    --background: 215 30% 10%;
+    --foreground: 210 40% 98%;
+
+    --card: 215 28% 14%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 215 28% 14%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 80% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 215 25% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 215 25% 18%;
+    --muted-foreground: 215 15% 60%;
+
+    --accent: 195 85% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --border: 215 25% 22%;
+    --input: 215 25% 22%;
+    --ring: 210 80% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
