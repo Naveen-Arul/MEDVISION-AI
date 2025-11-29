@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Upload as UploadIcon, FileImage, CheckCircle, AlertCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import PatientLayout from "@/components/patient/PatientLayout";
+import api from '@/lib/services';
 
 interface DiagnosisResult {
   prediction: string;
@@ -46,22 +47,38 @@ const PatientUpload = () => {
 
     setIsAnalyzing(true);
 
-    // Simulate AI analysis
-    setTimeout(() => {
-      const mockResult: DiagnosisResult = {
-        prediction: "Pneumonia Detected",
-        confidence: 87.5,
-        severity: "medium",
-        recommendation: "Consult with a pulmonologist for further evaluation. Antibiotic treatment may be required.",
-      };
-      setResult(mockResult);
-      setIsAnalyzing(false);
+    try {
+      // Call the real AI analysis API
+      const response = await api.ai.analyzeImage(file);
       
+      if (response.success && response.data) {
+        const aiResult = response.data.result;
+        const diagnosisResult: DiagnosisResult = {
+          prediction: aiResult.diagnosis,
+          confidence: aiResult.confidence || 0,
+          severity: response.data.riskLevel === "normal" ? "low" : response.data.riskLevel || "low",
+          recommendation: aiResult.recommendations?.[0] || "No recommendation available",
+        };
+        
+        setResult(diagnosisResult);
+        setIsAnalyzing(false);
+        
+        toast({
+          title: "Analysis Complete",
+          description: "Your X-ray has been analyzed successfully",
+        });
+      } else {
+        throw new Error(response.message || "Failed to analyze image");
+      }
+    } catch (error: any) {
+      console.error("AI analysis error:", error);
+      setIsAnalyzing(false);
       toast({
-        title: "Analysis Complete",
-        description: "Your X-ray has been analyzed successfully",
+        title: "Analysis Failed",
+        description: error.message || "Failed to analyze the X-ray image",
+        variant: "destructive",
       });
-    }, 3000);
+    }
   };
 
   const getSeverityColor = (severity: string) => {

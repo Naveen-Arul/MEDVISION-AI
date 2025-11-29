@@ -34,35 +34,45 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
-// Mock AI prediction function (replace with actual TensorFlow.js or Python service)
-const mockPneumoniaDetection = async (imagePath) => {
-  // Simulate processing time
-  await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
+// Call Python Flask API for pneumonia detection
+const callPythonAIService = async (imagePath) => {
+  const fs = require('fs');
+  const path = require('path');
+  const axios = require('axios');
   
-  // Mock prediction (replace with actual model inference)
-  const rawScore = Math.random();
-  const prediction = rawScore > 0.5 ? 'Pneumonia' : 'Normal';
-  const confidence = rawScore > 0.5 ? rawScore * 100 : (1 - rawScore) * 100;
-  
-  return {
-    prediction,
-    confidence: Math.round(confidence * 100) / 100,
-    rawScore,
-    recommendations: prediction === 'Pneumonia' ? 
-      [
-        'Consult a healthcare professional immediately',
-        'Consider getting a chest CT scan for detailed analysis',
-        'Monitor symptoms closely',
-        'Follow prescribed treatment if any'
-      ] : [
-        'Regular health checkups are recommended',
-        'Maintain good respiratory hygiene',
-        'Stay updated with vaccinations'
-      ],
-    detailedAnalysis: prediction === 'Pneumonia' ? 
-      'The AI model detected patterns consistent with pneumonia in the chest X-ray. Areas of opacity and infiltrates are visible in the lung fields.' :
-      'The chest X-ray appears normal with clear lung fields and no obvious signs of infection or abnormalities.'
-  };
+  try {
+    // Read the image file
+    const imageData = fs.createReadStream(imagePath);
+    
+    // Create form data
+    const FormData = require('form-data');
+    const form = new FormData();
+    form.append('file', imageData);
+    
+    // Call Python API
+    const response = await axios.post('http://localhost:5001/predict', form, {
+      headers: {
+        ...form.getHeaders()
+      }
+    });
+    
+    // Transform response to match expected format
+    const data = response.data;
+    if (data.success) {
+      return {
+        prediction: data.prediction,
+        confidence: data.confidence,
+        rawScore: data.raw_score,
+        recommendations: data.recommendations.filter(rec => rec !== ''),
+        detailedAnalysis: data.detailed_analysis
+      };
+    } else {
+      throw new Error(data.error || 'Python API returned failure');
+    }
+  } catch (error) {
+    console.error('Error calling Python API:', error.message);
+    throw new Error('Failed to get prediction from Python service: ' + error.message);
+  }
 };
 
 // @route   POST /api/ai/analyze-xray
@@ -70,7 +80,7 @@ const mockPneumoniaDetection = async (imagePath) => {
 // @access  Private
 router.post('/analyze-xray', upload.single('xray'), async (req, res) => {
   let analysisRecord = null;
-  
+
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -80,7 +90,7 @@ router.post('/analyze-xray', upload.single('xray'), async (req, res) => {
     }
 
     const startTime = Date.now();
-    
+
     // Create analysis record
     analysisRecord = new AIAnalysis({
       user: req.user._id,
@@ -105,9 +115,9 @@ router.post('/analyze-xray', upload.single('xray'), async (req, res) => {
       .jpeg({ quality: 90 })
       .toFile(processedImagePath);
 
-    // Perform AI analysis
-    const aiResult = await mockPneumoniaDetection(processedImagePath);
-    
+    // Perform AI analysis by calling Python service
+    const aiResult = await callPythonAIService(processedImagePath);
+
     const processingTime = Date.now() - startTime;
 
     // Update analysis record with results
@@ -148,7 +158,7 @@ router.post('/analyze-xray', upload.single('xray'), async (req, res) => {
 
   } catch (error) {
     console.error('AI analysis error:', error);
-    
+
     // Update analysis record with error
     if (analysisRecord) {
       analysisRecord.status = 'failed';
@@ -313,7 +323,7 @@ router.post('/analysis/:id/feedback', async (req, res) => {
 router.get('/analytics', async (req, res) => {
   try {
     const analytics = await AIAnalysis.getAnalyticsByUser(req.user._id);
-    
+
     const totalAnalyses = await AIAnalysis.countDocuments({ user: req.user._id });
     const recentAnalyses = await AIAnalysis.find({ user: req.user._id })
       .sort({ createdAt: -1 })

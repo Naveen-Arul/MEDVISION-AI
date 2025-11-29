@@ -14,7 +14,7 @@ const aiAnalysisSchema = new mongoose.Schema({
   inputData: {
     imageUrl: {
       type: String,
-      required: function() {
+      required: function () {
         return this.analysisType === 'pneumonia_detection' || this.analysisType === 'chest_xray_analysis';
       }
     },
@@ -29,7 +29,7 @@ const aiAnalysisSchema = new mongoose.Schema({
     },
     textInput: {
       type: String,
-      required: function() {
+      required: function () {
         return this.analysisType === 'risk_assessment';
       }
     }
@@ -38,7 +38,7 @@ const aiAnalysisSchema = new mongoose.Schema({
     prediction: {
       type: String,
       enum: ['Normal', 'Pneumonia', 'Inconclusive'],
-      required: function() {
+      required: function () {
         return this.analysisType === 'pneumonia_detection';
       }
     },
@@ -46,7 +46,7 @@ const aiAnalysisSchema = new mongoose.Schema({
       type: Number,
       min: 0,
       max: 100,
-      required: function() {
+      required: function () {
         return this.analysisType === 'pneumonia_detection';
       }
     },
@@ -118,12 +118,12 @@ const aiAnalysisSchema = new mongoose.Schema({
 });
 
 // Virtual for analysis age
-aiAnalysisSchema.virtual('analysisAge').get(function() {
+aiAnalysisSchema.virtual('analysisAge').get(function () {
   return Date.now() - this.createdAt;
 });
 
 // Virtual for risk level based on prediction
-aiAnalysisSchema.virtual('riskLevel').get(function() {
+aiAnalysisSchema.virtual('riskLevel').get(function () {
   if (this.analysisType === 'pneumonia_detection') {
     if (this.results.prediction === 'Pneumonia') {
       if (this.results.confidence >= 80) return 'high';
@@ -142,24 +142,24 @@ aiAnalysisSchema.index({ status: 1 });
 aiAnalysisSchema.index({ 'results.prediction': 1 });
 
 // Pre-save middleware
-aiAnalysisSchema.pre('save', function(next) {
+aiAnalysisSchema.pre('save', function (next) {
   // Set processing timestamps
   if (this.isNew) {
     this.inputData.imageMetadata.uploadDate = new Date();
   }
-  
+
   next();
 });
 
 // Static methods
-aiAnalysisSchema.statics.findByUser = function(userId, limit = 20) {
+aiAnalysisSchema.statics.findByUser = function (userId, limit = 20) {
   return this.find({ user: userId })
     .sort({ createdAt: -1 })
     .limit(limit)
     .populate('user', 'name email profile.avatar');
 };
 
-aiAnalysisSchema.statics.getAnalyticsByUser = function(userId) {
+aiAnalysisSchema.statics.getAnalyticsByUser = function (userId) {
   return this.aggregate([
     { $match: { user: mongoose.Types.ObjectId(userId) } },
     {
@@ -175,18 +175,18 @@ aiAnalysisSchema.statics.getAnalyticsByUser = function(userId) {
 };
 
 // Instance methods
-aiAnalysisSchema.methods.getPublicData = function() {
+aiAnalysisSchema.methods.getPublicData = function () {
   const analysis = this.toObject();
-  
+
   // Remove sensitive data if not owned by requester
   if (!analysis.isShared) {
     delete analysis.inputData.imageUrl;
   }
-  
+
   return analysis;
 };
 
-aiAnalysisSchema.methods.shareWith = function(userId, permissions = 'view') {
+aiAnalysisSchema.methods.shareWith = function (userId, permissions = 'view') {
   if (!this.sharedWith.some(share => share.user.toString() === userId.toString())) {
     this.sharedWith.push({
       user: userId,
