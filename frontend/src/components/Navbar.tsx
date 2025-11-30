@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Activity, User, LogOut } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Activity, User, LogOut, ChevronDown, UserPlus, Stethoscope } from "lucide-react";
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -51,9 +52,28 @@ const Navbar = () => {
                 <Link to="/login">
                   <Button variant="ghost" size="sm">Login</Button>
                 </Link>
-                <Link to="/signup-patient">
-                  <Button size="sm">Get Started</Button>
-                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm">
+                      Get Started
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link to="/signup-patient" className="flex items-center gap-2 cursor-pointer">
+                        <UserPlus className="h-4 w-4" />
+                        Sign up as Patient
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/signup-doctor" className="flex items-center gap-2 cursor-pointer">
+                        <Stethoscope className="h-4 w-4" />
+                        Sign up as Doctor
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
           </div>

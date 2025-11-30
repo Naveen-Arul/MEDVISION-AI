@@ -75,26 +75,29 @@ const callPythonAIService = async (imagePath) => {
   }
 };
 
-// @route   POST /api/ai/analyze-xray
-// @desc    Analyze chest X-ray for pneumonia detection
+// @route   POST /api/ai/analyze
+// @desc    Analyze medical images (chest X-ray for pneumonia detection)
 // @access  Private
-router.post('/analyze-xray', upload.single('xray'), async (req, res) => {
+router.post('/analyze', upload.single('file'), async (req, res) => {
   let analysisRecord = null;
 
   try {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'No X-ray image provided'
+        message: 'No medical image provided'
       });
     }
+
+    // Get analysis type from request or default to chest X-ray
+    const analysisType = req.body.analysisType || 'chest_xray';
 
     const startTime = Date.now();
 
     // Create analysis record
     analysisRecord = new AIAnalysis({
       user: req.user._id,
-      analysisType: 'pneumonia_detection',
+      analysisType: analysisType === 'chest_xray' ? 'pneumonia_detection' : analysisType,
       inputData: {
         imageUrl: `/uploads/${req.file.filename}`,
         imageMetadata: {
@@ -187,10 +190,10 @@ router.post('/analyze-xray', upload.single('xray'), async (req, res) => {
   }
 });
 
-// @route   GET /api/ai/analysis-history
+// @route   GET /api/ai/analyses
 // @desc    Get user's analysis history
 // @access  Private
-router.get('/analysis-history', async (req, res) => {
+router.get('/analyses', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;

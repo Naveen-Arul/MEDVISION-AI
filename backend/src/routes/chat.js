@@ -4,6 +4,12 @@ const { body, validationResult } = require('express-validator');
 const Chat = require('../models/Chat');
 const User = require('../models/User');
 const AIAnalysis = require('../models/AIAnalysis');
+const Groq = require('groq-sdk');
+
+// Initialize Groq client with API key from environment variables
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
 
 // @route   GET /api/chat
 // @desc    Get user's chats
@@ -344,24 +350,74 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Mock AI response generator (replace with actual AI service)
+// Generate AI response using Groq API for medical terms and doubts
 const generateAIResponse = async (userMessage, userId) => {
-  // Simple keyword-based responses
-  const message = userMessage.toLowerCase();
-  
-  if (message.includes('pneumonia') || message.includes('chest') || message.includes('xray') || message.includes('x-ray')) {
-    return '🔬 I can help you analyze chest X-rays for pneumonia detection! Please upload your X-ray image using the camera icon, and I\'ll provide a detailed analysis including confidence levels and recommendations.';
+  try {
+    // Define the system prompt to ensure the AI only responds to medical terms and doubts
+    const systemPrompt = `You are a specialized medical AI assistant for MedVision AI platform. 
+You should only respond to medical-related questions, symptoms, diagnoses, treatments, and health advice.
+
+Important guidelines:
+1. Only answer medical questions - politely decline non-medical topics
+2. Be empathetic and professional in your tone
+3. Never provide definitive diagnoses - always recommend consulting healthcare professionals
+4. When appropriate, suggest uploading chest X-rays for pneumonia analysis
+5. Do not provide medication dosages without proper context
+6. Emphasize the importance of professional medical consultation
+
+Example responses:
+- For pneumonia/X-ray questions: "I can help analyze chest X-rays for pneumonia detection. Please upload your X-ray image for detailed analysis."
+- For general symptoms: "While I can provide general information, please consult with a healthcare professional for proper evaluation of your symptoms."
+- For non-medical questions: "I'm designed to assist with medical questions. Please ask about health conditions, symptoms, or medical procedures."`;
+
+    // Create the chat completion
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: userMessage
+        }
+      ],
+      model: "llama3-8b-8192",
+      temperature: 0.7,
+      max_tokens: 500,
+      top_p: 1,
+      stop: null,
+      stream: false
+    });
+
+    // Extract and return the response
+    const aiResponse = chatCompletion.choices[0]?.message?.content || "I apologize, but I couldn't process your request at the moment. Please try again later.";
+    
+    // Ensure the response is medical-related, otherwise provide a standard response
+    if (aiResponse.toLowerCase().includes("non-medical") || aiResponse.toLowerCase().includes("not medical")) {
+      return "I'm designed to assist with medical questions. Please ask about health conditions, symptoms, or medical procedures related to pneumonia detection and respiratory health.";
+    }
+    
+    return aiResponse;
+  } catch (error) {
+    console.error('Groq API error:', error);
+    // Fallback to predefined responses if Groq API fails
+    const message = userMessage.toLowerCase();
+    
+    if (message.includes('pneumonia') || message.includes('chest') || message.includes('xray') || message.includes('x-ray')) {
+      return '🔬 I can help you analyze chest X-rays for pneumonia detection! Please upload your X-ray image, and I\'ll provide a detailed analysis including confidence levels and recommendations.';
+    }
+    
+    if (message.includes('symptoms') || message.includes('cough') || message.includes('fever')) {
+      return '🩺 I understand you\'re asking about symptoms. While I can analyze X-ray images, for symptom evaluation, please consult with a healthcare professional. Common pneumonia symptoms include persistent cough, fever, difficulty breathing, and chest pain.';
+    }
+    
+    if (message.includes('help') || message.includes('how')) {
+      return '💡 I can assist you with:\n• Chest X-ray analysis for pneumonia detection\n• Medical information and guidance\n• Health recommendations based on analysis results\n\nTo get started, you can upload a chest X-ray image or ask me any health-related questions!';
+    }
+    
+    return '🤖 Thank you for your message! I\'m here to help with medical analysis and health guidance. Could you please provide more specific information about what you\'d like assistance with? You can also upload chest X-ray images for pneumonia analysis.';
   }
-  
-  if (message.includes('symptoms') || message.includes('cough') || message.includes('fever')) {
-    return '🩺 I understand you\'re asking about symptoms. While I can analyze X-ray images, for symptom evaluation, please consult with a healthcare professional. Common pneumonia symptoms include persistent cough, fever, difficulty breathing, and chest pain.';
-  }
-  
-  if (message.includes('help') || message.includes('how')) {
-    return '💡 I can assist you with:\n• Chest X-ray analysis for pneumonia detection\n• Medical information and guidance\n• Health recommendations based on analysis results\n\nTo get started, you can upload a chest X-ray image or ask me any health-related questions!';
-  }
-  
-  return '🤖 Thank you for your message! I\'m here to help with medical analysis and health guidance. Could you please provide more specific information about what you\'d like assistance with? You can also upload chest X-ray images for pneumonia analysis.';
 };
 
 // @route   DELETE /api/chat/:id
@@ -404,6 +460,48 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete chat'
+    });
+  }
+});
+
+// @route   POST /api/chat/medical-assistant
+// @desc    Get medical AI response for specific medical queries
+// @access  Private
+router.post('/medical-assistant', [
+  body('query')
+    .trim()
+    .isLength({ min: 1, max: 1000 })
+    .withMessage('Query must be between 1 and 1000 characters')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { query } = req.body;
+
+    // Generate medical AI response using Groq
+    const aiResponse = await generateAIResponse(query, req.user._id);
+
+    res.json({
+      success: true,
+      message: 'Medical assistance provided',
+      data: {
+        query,
+        response: aiResponse
+      }
+    });
+
+  } catch (error) {
+    console.error('Medical assistant error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get medical assistance'
     });
   }
 });

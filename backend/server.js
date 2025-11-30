@@ -26,7 +26,7 @@ const server = createServer(app);
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["http://localhost:5173"],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["http://localhost:8080", "http://localhost:5173"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -187,10 +187,7 @@ const connectDB = async () => {
       throw new Error('MONGODB_URI is not defined in environment variables');
     }
 
-    const conn = await mongoose.connect(mongoURI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    const conn = await mongoose.connect(mongoURI);
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
     console.log(`🔹 Database: ${conn.connection.name}`);
@@ -210,14 +207,14 @@ const startServer = async () => {
     
     // Start server
     server.listen(PORT, () => {
-      console.log('🚀 AI-HER Backend Server Started');
-      console.log('=' * 50);
+      console.log('🚀 MedVision AI Backend Server Started');
+      console.log('='.repeat(50));
       console.log(`🔹 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔹 Server: http://localhost:${PORT}`);
       console.log(`🔹 Health Check: http://localhost:${PORT}/api/health`);
       console.log(`🔹 API Base: http://localhost:${PORT}/api`);
       console.log(`🔹 Socket.IO: Enabled`);
-      console.log('=' * 50);
+      console.log('='.repeat(50));
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);

@@ -233,6 +233,14 @@ export const chatService = {
     return apiClient.post(`/chat/${chatId}/messages`, messageData);
   },
 
+  // Get medical AI assistance
+  getMedicalAssistance: async (query: string): Promise<APIResponse<{
+    query: string;
+    response: string;
+  }>> => {
+    return apiClient.post('/chat/medical-assistant', { query });
+  },
+
   // Update chat settings
   updateChat: async (chatId: string, updates: {
     title?: string;

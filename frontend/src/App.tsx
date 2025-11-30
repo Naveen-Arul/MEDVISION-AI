@@ -19,6 +19,7 @@ import Chat from "./pages/Chat";
 import Analysis from "./pages/Analysis";
 import Settings from "./pages/Settings";
 import HealthTips from "./pages/HealthTips";
+import MedicalRecords from "./pages/MedicalRecords";
 
 import PatientDashboard from "./pages/patient/Dashboard";
 import PatientUpload from "./pages/patient/Upload";
@@ -90,6 +91,11 @@ const App = () => (
               <Route path="/health-tips" element={
                 <ProtectedRoute>
                   <HealthTips />
+                </ProtectedRoute>
+              } />
+              <Route path="/records" element={
+                <ProtectedRoute>
+                  <MedicalRecords />
                 </ProtectedRoute>
               } />
 

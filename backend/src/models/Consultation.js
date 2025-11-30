@@ -58,8 +58,7 @@ const consultationSchema = new mongoose.Schema({
   // Video Call Integration
   videoCall: {
     roomId: {
-      type: String,
-      unique: true
+      type: String
     },
     jitsiRoomName: String,
     startedAt: Date,

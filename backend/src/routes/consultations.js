@@ -259,7 +259,7 @@ router.post('/', verifyToken, [
 
     // Verify doctor exists and is active
     const doctor = await User.findById(doctorId);
-    if (!doctor || doctor.role !== 'doctor' || !doctor.profile.isActive) {
+    if (!doctor || doctor.role !== 'doctor' || !doctor.isActive) {
       return res.status(404).json({
         success: false,
         message: 'Doctor not found or not available'

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -17,7 +18,8 @@ import {
   Video,
   MoreVertical,
   Paperclip,
-  Smile
+  Smile,
+  Bot
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSocket } from "@/contexts/SocketContext";
@@ -25,6 +27,7 @@ import { chatService } from "@/lib/services";
 import { Chat, Message } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { ChatMessage } from "@/components/ChatMessage";
+import { MedicalChatbot } from "@/components/MedicalChatbot";
 
 export default function ChatPage() {
   const navigate = useNavigate();
@@ -42,6 +45,7 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState("chat");
 
   // Load chats on mount
   useEffect(() => {
@@ -354,7 +358,7 @@ export default function ChatPage() {
                   <p className="text-xs text-muted-foreground">Online</p>
                 </div>
               </div>
-              
+                          
               <div className="flex gap-2">
                 <Button variant="ghost" size="icon">
                   <Phone className="w-4 h-4" />
@@ -367,89 +371,108 @@ export default function ChatPage() {
                 </Button>
               </div>
             </div>
-
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-4">
-              {isLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">No messages yet</p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Start the conversation!
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {messages.map((message, index) => {
-                    const isOwn = message.sender._id === user?._id;
-                    const showAvatar = index === 0 || 
-                      messages[index - 1].sender._id !== message.sender._id;
-                    
-                    return (
-                      <ChatMessage
-                        key={message._id}
-                        message={message}
-                        isOwn={isOwn}
-                        showAvatar={showAvatar}
-                      />
-                    );
-                  })}
-                  
-                  {/* Typing indicator */}
-                  {typingUsers.size > 0 && (
-                    <div className="flex gap-2">
-                      <Avatar className="w-6 h-6">
-                        <AvatarFallback className="text-xs">
-                          {getOtherParticipant(selectedChat)?.user?.name?.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="bg-secondary rounded-lg p-3">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        
+            {/* Tabbed Interface */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="chat">Doctor Chat</TabsTrigger>
+                <TabsTrigger value="medical-assistant">
+                  <Bot className="w-4 h-4 mr-2" />
+                  Medical Assistant
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="chat" className="flex-1 flex flex-col mt-0">
+                {/* Messages */}
+                <ScrollArea className="flex-1 p-4">
+                  {isLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">No messages yet</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Start the conversation!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {messages.map((message, index) => {
+                        const isOwn = message.sender._id === user?._id;
+                        const showAvatar = index === 0 || 
+                          messages[index - 1].sender._id !== message.sender._id;
+                        
+                        return (
+                          <ChatMessage
+                            key={message._id}
+                            message={message}
+                            isOwn={isOwn}
+                            showAvatar={showAvatar}
+                          />
+                        );
+                      })}
+                      
+                      {/* Typing indicator */}
+                      {typingUsers.size > 0 && (
+                        <div className="flex gap-2">
+                          <Avatar className="w-6 h-6">
+                            <AvatarFallback className="text-xs">
+                              {getOtherParticipant(selectedChat)?.user?.name?.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="bg-secondary rounded-lg p-3">
+                            <div className="flex gap-1">
+                              <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce"></div>
+                              <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                              <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
-            </ScrollArea>
+                </ScrollArea>
 
-            {/* Message Input */}
-            <div className="p-4 border-t">
-              <div className="flex gap-2">
-                <Button variant="ghost" size="icon">
-                  <Paperclip className="w-4 h-4" />
-                </Button>
-                <div className="flex-1 relative">
-                  <Input
-                    placeholder="Type a message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    disabled={isSending}
-                  />
+                {/* Message Input */}
+                <div className="p-4 border-t">
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon">
+                      <Paperclip className="w-4 h-4" />
+                    </Button>
+                    <div className="flex-1 relative">
+                      <Input
+                        placeholder="Type a message..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        disabled={isSending}
+                      />
+                    </div>
+                    <Button variant="ghost" size="icon">
+                      <Smile className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      onClick={sendMessage}
+                      disabled={!newMessage.trim() || isSending}
+                      size="icon"
+                    >
+                      {isSending ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <Button variant="ghost" size="icon">
-                  <Smile className="w-4 h-4" />
-                </Button>
-                <Button 
-                  onClick={sendMessage}
-                  disabled={!newMessage.trim() || isSending}
-                  size="icon"
-                >
-                  {isSending ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground"></div>
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
+              </TabsContent>
+              
+              <TabsContent value="medical-assistant" className="flex-1 mt-0">
+                <div className="p-4 h-full">
+                  <MedicalChatbot />
+                </div>
+              </TabsContent>
+            </Tabs>
           </>
         ) : (
           /* Empty State */
