@@ -1,5 +1,5 @@
 // API Configuration for MERN Backend
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'https://medvision-ai-d10f.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://medvision-ai-d10f.onrender.com/api';
 
 // API Client class for handling requests
 class APIClient {
