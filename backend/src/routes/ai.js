@@ -49,8 +49,9 @@ const callPythonAIService = async (imagePath) => {
     const form = new FormData();
     form.append('file', imageData);
     
-    // Call Python API
-    const response = await axios.post('http://localhost:5001/predict', form, {
+    // Call Python AI Service - use environment variable or fallback
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'https://medvision-ai-d10f.onrender.com';
+    const response = await axios.post(`${aiServiceUrl}/predict`, form, {
       headers: {
         ...form.getHeaders()
       }

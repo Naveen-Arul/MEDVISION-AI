@@ -44,7 +44,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
   const initializeSocket = () => {
     try {
       // Create socket connection
-      socketRef.current = io(process.env.VITE_API_URL || 'http://localhost:5000', {
+      socketRef.current = io((import.meta as any).env?.VITE_SOCKET_URL || 'https://medvision-ai-d10f.onrender.com', {
         auth: {
           userId: user?.id,
           token: localStorage.getItem('token'),

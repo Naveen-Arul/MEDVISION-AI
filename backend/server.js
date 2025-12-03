@@ -26,7 +26,7 @@ const server = createServer(app);
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-gamma.vercel.app", "http://localhost:8080", "http://localhost:5173"],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-gamma.vercel.app"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -55,7 +55,7 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ["http://localhost:5173"];
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-gamma.vercel.app"];
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
@@ -96,6 +96,61 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     version: '1.0.0'
+  });
+});
+
+// Root route - API status
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'MedVision AI Backend API is running!',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    backend_url: 'https://medvision-ai-d10f.onrender.com',
+    frontend_url: 'https://medvision-ai-gamma.vercel.app',
+    endpoints: {
+      auth: '/api/auth',
+      users: '/api/users',
+      ai: '/api/ai',
+      chat: '/api/chat',
+      analytics: '/api/analytics',
+      consultations: '/api/consultations',
+      health: '/api/health'
+    }
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'healthy',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
+
+// Root route
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'MedVision AI Backend Server',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      auth: '/api/auth',
+      users: '/api/users',
+      ai: '/api/ai',
+      chat: '/api/chat',
+      analytics: '/api/analytics',
+      consultations: '/api/consultations',
+      health: '/health'
+    },
+    deployment: {
+      frontend: 'https://medvision-ai-gamma.vercel.app',
+      backend: 'https://medvision-ai-d10f.onrender.com'
+    }
   });
 });
 
@@ -210,9 +265,10 @@ const startServer = async () => {
       console.log('🚀 MedVision AI Backend Server Started');
       console.log('='.repeat(50));
       console.log(`🔹 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔹 Server: http://localhost:${PORT}`);
-      console.log(`🔹 Health Check: http://localhost:${PORT}/api/health`);
-      console.log(`🔹 API Base: http://localhost:${PORT}/api`);
+      console.log(`🔹 Server: https://medvision-ai-d10f.onrender.com`);
+      console.log(`🔹 Health Check: https://medvision-ai-d10f.onrender.com/api/health`);
+      console.log(`🔹 API Base: https://medvision-ai-d10f.onrender.com/api`);
+      console.log(`🔹 Frontend: https://medvision-ai-gamma.vercel.app`);
       console.log(`🔹 Socket.IO: Enabled`);
       console.log('='.repeat(50));
     });
