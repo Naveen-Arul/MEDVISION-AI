@@ -26,7 +26,7 @@ const server = createServer(app);
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-gamma.vercel.app"],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-naveen.onrender.com"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -55,7 +55,7 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-gamma.vercel.app"];
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-naveen.onrender.com"];
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
@@ -107,7 +107,7 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     backend_url: 'https://medvision-ai-d10f.onrender.com',
-    frontend_url: 'https://medvision-ai-gamma.vercel.app',
+    frontend_url: 'https://medvision-ai-naveen.onrender.com',
     endpoints: {
       auth: '/api/auth',
       users: '/api/users',
@@ -148,7 +148,7 @@ app.get('/', (req, res) => {
       health: '/health'
     },
     deployment: {
-      frontend: 'https://medvision-ai-gamma.vercel.app',
+      frontend: 'https://medvision-ai-naveen.onrender.com',
       backend: 'https://medvision-ai-d10f.onrender.com'
     }
   });
@@ -268,7 +268,7 @@ const startServer = async () => {
       console.log(`🔹 Server: https://medvision-ai-d10f.onrender.com`);
       console.log(`🔹 Health Check: https://medvision-ai-d10f.onrender.com/api/health`);
       console.log(`🔹 API Base: https://medvision-ai-d10f.onrender.com/api`);
-      console.log(`🔹 Frontend: https://medvision-ai-gamma.vercel.app`);
+      console.log(`🔹 Frontend: https://medvision-ai-naveen.onrender.com`);
       console.log(`🔹 Socket.IO: Enabled`);
       console.log('='.repeat(50));
     });

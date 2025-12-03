@@ -17,9 +17,9 @@ services:
       - key: GROQ_API_KEY
         sync: false  # Set this manually in Render dashboard
       - key: FRONTEND_URL
-        value: https://medvision-ai-gamma.vercel.app
+        value: https://medvision-ai-naveen.onrender.com
       - key: ALLOWED_ORIGINS
-        value: https://medvision-ai-gamma.vercel.app,https://medvision-ai-gamma.vercel.app
+        value: https://medvision-ai-naveen.onrender.com
       - key: RATE_LIMIT_WINDOW
         value: 15
       - key: RATE_LIMIT_MAX_REQUESTS
