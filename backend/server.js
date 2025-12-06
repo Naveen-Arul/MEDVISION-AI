@@ -26,7 +26,7 @@ const server = createServer(app);
 // Socket.IO setup
 const io = new Server(server, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-naveen.onrender.com"],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-naveen.onrender.com", "http://localhost:3000", "http://localhost:5173", "http://localhost:8080"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -55,7 +55,7 @@ app.use(helmet({
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-naveen.onrender.com"];
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ["https://medvision-ai-naveen.onrender.com", "http://localhost:3000", "http://localhost:5173", "http://localhost:8080"];
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
