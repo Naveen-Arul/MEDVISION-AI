@@ -100,40 +100,26 @@ router.get('/upcoming', verifyToken, async (req, res) => {
 // @access  Private
 router.get('/doctors', verifyToken, [
   query('specialization').optional().isIn(['general', 'pulmonology', 'radiology', 'cardiology', 'oncology']),
-  query('available').optional().isBoolean(),
 ], async (req, res) => {
   try {
-    const { specialization, available } = req.query;
+    const { specialization } = req.query;
     
-    const query = { role: 'doctor', 'profile.isActive': true };
+    // Simple query - show ALL doctors
+    const query = { role: 'doctor' };
     if (specialization) {
-      query['profile.specialization'] = specialization;
+      query.$or = [
+        { 'profile.specialization': specialization },
+        { 'specialization': specialization }
+      ];
     }
 
     const doctors = await User.find(query)
-      .select('name email profile.specialization profile.bio profile.experience profile.avatar profile.consultationFee')
-      .sort({ 'profile.rating': -1 });
-
-    // If checking availability, filter doctors
-    let availableDoctors = doctors;
-    if (available === 'true') {
-      const now = new Date();
-      const nextWeek = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
-
-      availableDoctors = [];
-      for (const doctor of doctors) {
-        const bookedSlots = await Consultation.findByTimeRange(now, nextWeek, doctor._id);
-        // Simple availability check - if they have less than 40 hours booked in next week
-        const totalBookedHours = bookedSlots.reduce((sum, slot) => sum + (slot.duration / 60), 0);
-        if (totalBookedHours < 40) {
-          availableDoctors.push(doctor);
-        }
-      }
-    }
+      .select('name email profile specialization bio experience rating avatar availability')
+      .sort({ rating: -1 });
 
     res.json({
       success: true,
-      data: availableDoctors
+      data: doctors
     });
 
   } catch (error) {
@@ -145,8 +131,32 @@ router.get('/doctors', verifyToken, [
   }
 });
 
+// @route   GET /api/consultations/patients
+// @desc    Get all patients for doctor to view
+// @access  Private (Doctor only)
+router.get('/patients', verifyToken, async (req, res) => {
+  try {
+    // Get all patients
+    const patients = await User.find({ role: 'patient' })
+      .select('name email profile createdAt')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: patients
+    });
+
+  } catch (error) {
+    console.error('Get patients error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch patients'
+    });
+  }
+});
+
 // @route   GET /api/consultations/availability/:doctorId
-// @desc    Get doctor availability for specific date
+// @desc    Get all time slots for patient to request consultation (no restrictions)
 // @access  Private
 router.get('/availability/:doctorId', verifyToken, [
   query('date').isISO8601().withMessage('Date must be in ISO format')
@@ -173,32 +183,19 @@ router.get('/availability/:doctorId', verifyToken, [
       });
     }
 
-    // Get booked slots for the date
-    const bookedSlots = await Consultation.getDoctorAvailability(doctorId, date);
-
-    // Generate available slots (9 AM to 5 PM, 30-minute intervals)
+    // Generate ALL time slots (24 hours, 30-minute intervals)
+    // Patient can request ANY time, doctor will approve/reject
     const availableSlots = [];
-    const targetDate = new Date(date);
     
-    for (let hour = 9; hour < 17; hour++) {
+    for (let hour = 0; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        const slotTime = new Date(targetDate);
-        slotTime.setHours(hour, minute, 0, 0);
+        // Format time as HH:MM
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         
-        const slotEnd = new Date(slotTime.getTime() + (30 * 60 * 1000));
-        
-        // Check if slot conflicts with booked appointments
-        const isBooked = bookedSlots.some(booked => {
-          return (slotTime >= booked.start && slotTime < booked.end) ||
-                 (slotEnd > booked.start && slotEnd <= booked.end);
+        availableSlots.push({
+          time: timeString,
+          display: timeString
         });
-        
-        if (!isBooked && slotTime > new Date()) {
-          availableSlots.push({
-            time: slotTime.toISOString(),
-            display: slotTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          });
-        }
       }
     }
 
@@ -209,10 +206,10 @@ router.get('/availability/:doctorId', verifyToken, [
         doctor: {
           id: doctor._id,
           name: doctor.name,
-          specialization: doctor.profile.specialization
+          specialization: doctor.specialization || doctor.profile?.specialization
         },
         availableSlots,
-        bookedSlots: bookedSlots.length
+        note: 'Patient can select any time. Doctor will review and approve the request.'
       }
     });
 
@@ -226,7 +223,7 @@ router.get('/availability/:doctorId', verifyToken, [
 });
 
 // @route   POST /api/consultations
-// @desc    Book a new consultation
+// @desc    Create consultation request (patient requests, doctor approves)
 // @access  Private
 router.post('/', verifyToken, [
   body('doctorId').isMongoId().withMessage('Valid doctor ID is required'),
@@ -257,33 +254,23 @@ router.post('/', verifyToken, [
       duration = 30
     } = req.body;
 
-    // Verify doctor exists and is active
+    // Verify doctor exists
     const doctor = await User.findById(doctorId);
-    if (!doctor || doctor.role !== 'doctor' || !doctor.isActive) {
+    if (!doctor || doctor.role !== 'doctor') {
       return res.status(404).json({
         success: false,
-        message: 'Doctor not found or not available'
+        message: 'Doctor not found'
       });
     }
 
-    // Check if the time slot is available
+    // Patient can request ANY time - no availability checking
+    // Status starts as 'scheduled' (pending doctor approval)
     const scheduledTime = new Date(scheduledDateTime);
-    const endTime = new Date(scheduledTime.getTime() + (duration * 60 * 1000));
-    
-    const conflictingConsultations = await Consultation.findByTimeRange(
-      scheduledTime,
-      endTime,
-      doctorId
-    );
 
-    if (conflictingConsultations.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Time slot is not available'
-      });
-    }
+    // Generate unique room ID for video call
+    const roomId = `consult-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create consultation
+    // Create consultation request
     const consultation = new Consultation({
       patient: req.user._id,
       doctor: doctorId,
@@ -293,9 +280,14 @@ router.post('/', verifyToken, [
       specialization,
       reason,
       symptoms,
+      status: 'scheduled', // Pending doctor approval
+      videoCall: {
+        roomId: roomId,
+        jitsiRoomName: roomId
+      },
       createdBy: req.user._id,
       billing: {
-        fee: doctor.profile.consultationFee || 100
+        fee: doctor.profile?.consultationFee || 100
       }
     });
 
@@ -306,7 +298,7 @@ router.post('/', verifyToken, [
       title: `Consultation: ${doctor.name}`,
       chatType: 'doctor_consultation',
       participants: [
-        { user: req.user._id, role: 'patient' },
+        { user: req.user._id, role: 'user' },
         { user: doctorId, role: 'doctor' }
       ],
       settings: {
@@ -329,15 +321,17 @@ router.post('/', verifyToken, [
 
     res.status(201).json({
       success: true,
-      message: 'Consultation booked successfully',
+      message: 'Consultation request sent successfully. Waiting for doctor approval.',
       data: populatedConsultation
     });
 
   } catch (error) {
     console.error('Book consultation error:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
     res.status(500).json({
       success: false,
-      message: 'Failed to book consultation'
+      message: 'Failed to book consultation',
+      error: error.message
     });
   }
 });

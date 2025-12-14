@@ -350,13 +350,15 @@ export const consultationService = {
   },
 
   // Get available doctors
-  getDoctors: async (specialization?: string, available?: boolean): Promise<APIResponse<User[]>> => {
+  getDoctors: async (specialization?: string): Promise<APIResponse<User[]>> => {
     let url = '/consultations/doctors';
-    const params = [];
-    if (specialization) params.push(`specialization=${specialization}`);
-    if (available !== undefined) params.push(`available=${available}`);
-    if (params.length > 0) url += `?${params.join('&')}`;
+    if (specialization) url += `?specialization=${specialization}`;
     return apiClient.get(url);
+  },
+
+  // Get all patients (for doctors)
+  getPatients: async (): Promise<APIResponse<User[]>> => {
+    return apiClient.get('/consultations/patients');
   },
 
   // Get doctor availability for a specific date

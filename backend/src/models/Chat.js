@@ -146,7 +146,7 @@ const chatSchema = new mongoose.Schema({
 
 // Virtual for message count
 chatSchema.virtual('messageCount').get(function() {
-  return this.messages.filter(msg => !msg.metadata.isDeleted).length;
+  return this.messages?.filter(msg => !msg.metadata?.isDeleted).length || 0;
 });
 
 // Virtual for unread message count for a specific user
@@ -157,7 +157,8 @@ chatSchema.virtual('unreadCount').get(function() {
 
 // Virtual for latest message
 chatSchema.virtual('latestMessage').get(function() {
-  const activeMessages = this.messages.filter(msg => !msg.metadata.isDeleted);
+  const activeMessages = this.messages?.filter(msg => !msg.metadata?.isDeleted) || [];
+  if (activeMessages.length === 0) return null;
   return activeMessages.length > 0 ? activeMessages[activeMessages.length - 1] : null;
 });
 
@@ -225,9 +226,10 @@ chatSchema.methods.markAsRead = function(userId, messageId = null) {
 };
 
 chatSchema.methods.getUnreadCount = function(userId) {
+  if (!this.messages || this.messages.length === 0) return 0;
   return this.messages.filter(message => 
-    !message.metadata.isDeleted &&
-    !message.metadata.readBy.some(read => read.user.toString() === userId.toString())
+    !message.metadata?.isDeleted &&
+    !message.metadata?.readBy?.some(read => read.user.toString() === userId.toString())
   ).length;
 };
 

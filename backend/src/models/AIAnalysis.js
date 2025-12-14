@@ -161,7 +161,7 @@ aiAnalysisSchema.statics.findByUser = function (userId, limit = 20) {
 
 aiAnalysisSchema.statics.getAnalyticsByUser = function (userId) {
   return this.aggregate([
-    { $match: { user: mongoose.Types.ObjectId(userId) } },
+    { $match: { user: new mongoose.Types.ObjectId(userId) } },
     {
       $group: {
         _id: '$analysisType',

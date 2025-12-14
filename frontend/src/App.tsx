@@ -27,11 +27,18 @@ import PatientHistory from "./pages/patient/History";
 import PatientReport from "./pages/patient/Report";
 import PatientConsult from "./pages/patient/Consult";
 import PatientCall from "./pages/patient/Call";
+import PatientAIAssistant from "./pages/patient/AIAssistant";
+import DoctorList from "./pages/patient/DoctorList";
+import BookAppointment from "./pages/patient/BookAppointment";
+import PatientConsultation from "./pages/patient/PatientConsultation";
+import MyAppointments from "./pages/patient/MyAppointments";
 
 import DoctorDashboard from "./pages/doctor/Dashboard";
 import DoctorPatients from "./pages/doctor/Patients";
 import DoctorViewReport from "./pages/doctor/ViewReport";
 import DoctorCall from "./pages/doctor/Call";
+import DoctorAppointments from "./pages/doctor/DoctorAppointments";
+import DoctorConsultation from "./pages/doctor/DoctorConsultation";
 
 import NotFound from "./pages/NotFound";
 
@@ -119,12 +126,32 @@ const App = () => (
                 <PatientReport />
               </ProtectedRoute>
             } />
-            <Route path="/patient/consult" element={
+            <Route path="/patient/appointments" element={
               <ProtectedRoute allowedRoles={["patient"]}>
-                <PatientConsult />
+                <MyAppointments />
               </ProtectedRoute>
             } />
-            <Route path="/patient/consult/:roomID" element={
+            <Route path="/patient/consult" element={
+              <ProtectedRoute allowedRoles={["patient"]}>
+                <DoctorList />
+              </ProtectedRoute>
+            } />
+            <Route path="/patient/consult/book/:doctorId" element={
+              <ProtectedRoute allowedRoles={["patient"]}>
+                <BookAppointment />
+              </ProtectedRoute>
+            } />
+            <Route path="/patient/consult/:appointmentId" element={
+              <ProtectedRoute allowedRoles={["patient"]}>
+                <PatientConsultation />
+              </ProtectedRoute>
+            } />
+            <Route path="/patient/ai-assistant" element={
+              <ProtectedRoute allowedRoles={["patient"]}>
+                <PatientAIAssistant />
+              </ProtectedRoute>
+            } />
+            <Route path="/patient/call/:roomId" element={
               <ProtectedRoute allowedRoles={["patient"]}>
                 <PatientCall />
               </ProtectedRoute>
@@ -135,6 +162,11 @@ const App = () => (
                 <DoctorDashboard />
               </ProtectedRoute>
             } />
+            <Route path="/doctor/appointments" element={
+              <ProtectedRoute allowedRoles={["doctor"]}>
+                <DoctorAppointments />
+              </ProtectedRoute>
+            } />
             <Route path="/doctor/patients" element={
               <ProtectedRoute allowedRoles={["doctor"]}>
                 <DoctorPatients />
@@ -143,6 +175,11 @@ const App = () => (
             <Route path="/doctor/view/:id" element={
               <ProtectedRoute allowedRoles={["doctor"]}>
                 <DoctorViewReport />
+              </ProtectedRoute>
+            } />
+            <Route path="/doctor/consult/:appointmentId" element={
+              <ProtectedRoute allowedRoles={["doctor"]}>
+                <DoctorConsultation />
               </ProtectedRoute>
             } />
             <Route path="/doctor/consult/:roomID" element={

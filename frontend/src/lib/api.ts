@@ -296,3 +296,30 @@ export interface Consultation {
   createdAt: string;
   updatedAt: string;
 }
+
+// Helper function to generate unique room ID
+export const generateRoomId = (): string => {
+  return 'medvision-' + crypto.randomUUID();
+};
+
+// Helper function to check if appointment time has arrived
+export const isAppointmentTimeReached = (scheduledDateTime: string): boolean => {
+  const scheduledTime = new Date(scheduledDateTime).getTime();
+  const currentTime = new Date().getTime();
+  return currentTime >= scheduledTime;
+};
+
+// Helper function to format time remaining until appointment
+export const getTimeUntilAppointment = (scheduledDateTime: string): string => {
+  const scheduledTime = new Date(scheduledDateTime).getTime();
+  const currentTime = new Date().getTime();
+  const diff = scheduledTime - currentTime;
+  
+  if (diff <= 0) return 'Now';
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+};

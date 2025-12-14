@@ -155,12 +155,27 @@ const DoctorDashboard = () => {
             </Card>
           </Link>
 
-          <Card className="shadow-card">
+          <Link to="/doctor/appointments">
+            <Card className="shadow-card hover:shadow-elevated transition-all cursor-pointer h-full">
+              <CardHeader>
+                <div className="rounded-full bg-medical-blue-light p-3 w-fit mb-2">
+                  <Activity className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>My Appointments</CardTitle>
+                <CardDescription>
+                  View and manage your scheduled consultations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button className="w-full">View Appointments</Button>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        <Card className="shadow-card">
             <CardHeader>
-              <div className="rounded-full bg-medical-blue-light p-3 w-fit mb-2">
-                <Activity className="h-6 w-6 text-primary" />
-              </div>
-              <CardTitle>Scheduled Consultations</CardTitle>
+              <CardTitle>Upcoming Consultations</CardTitle>
               <CardDescription>
                 Upcoming video consultations with patients
               </CardDescription>
@@ -195,7 +210,6 @@ const DoctorDashboard = () => {
               )}
             </CardContent>
           </Card>
-        </div>
       </div>
     </div>
   );

@@ -22,7 +22,9 @@ router.get('/', async (req, res) => {
 
     let query = {
       'participants.user': req.user._id,
-      isActive: true
+      isActive: true,
+      // Exclude consultation chats - they appear in appointments page only
+      chatType: { $ne: 'doctor_consultation' }
     };
 
     if (chatType) {
@@ -146,6 +148,233 @@ router.post('/', [
     res.status(500).json({
       success: false,
       message: 'Failed to create chat'
+    });
+  }
+});
+
+// @route   POST /api/chat/ai-assistant
+// @desc    Get AI health assistant response using Groq
+// @access  Private
+router.post('/ai-assistant', async (req, res) => {
+  try {
+    const { message, image, conversationHistory = [] } = req.body;
+
+    if (!message && !image) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide a message or image'
+      });
+    }
+
+    // Check if Groq API key is configured
+    if (!process.env.GROQ_API_KEY) {
+      console.error('GROQ_API_KEY is not configured');
+      return res.status(500).json({
+        success: false,
+        message: 'AI service is not configured. Please contact administrator.'
+      });
+    }
+
+    console.log('AI Assistant request:', { message: message?.substring(0, 50), hasImage: !!image });
+
+    // Pre-filter: Check if query seems non-medical (basic heuristic)
+    const nonMedicalKeywords = [
+      'code', 'programming', 'java', 'python', 'javascript', 'array', 'function',
+      'algorithm', 'data structure', 'software', 'develop', 'html', 'css',
+      'recipe', 'cooking', 'game', 'movie', 'music', 'sports', 'weather',
+      'math problem', 'homework', 'calculate', 'history', 'geography'
+    ];
+    
+    const medicalKeywords = [
+      'symptom', 'pain', 'fever', 'cough', 'headache', 'nausea', 'vomit',
+      'disease', 'condition', 'treatment', 'medication', 'doctor', 'health',
+      'sick', 'illness', 'injury', 'medical', 'diagnosis', 'chest', 'breath',
+      'heart', 'blood', 'pressure', 'diabetes', 'cancer', 'infection', 'virus',
+      'bacteria', 'allergy', 'rash', 'fatigue', 'dizzy', 'swelling', 'ache'
+    ];
+
+    const messageLower = message?.toLowerCase() || '';
+    const hasNonMedicalKeywords = nonMedicalKeywords.some(kw => messageLower.includes(kw));
+    const hasMedicalKeywords = medicalKeywords.some(kw => messageLower.includes(kw));
+    
+    // If clearly non-medical and no medical context, provide quick redirect
+    if (hasNonMedicalKeywords && !hasMedicalKeywords && message.length > 10) {
+      console.log('Non-medical query detected, providing redirect response');
+      return res.json({
+        success: true,
+        data: {
+          response: `I appreciate your question, but I'm specifically designed as a medical AI assistant for MedVision AI. I can only help with health-related questions such as:
+
+🏥 Symptoms and health concerns
+💊 Medications and treatments  
+🩺 Medical conditions and diseases
+🫁 Chest X-ray analysis for pneumonia
+📋 General health guidance
+
+For non-medical questions, please use a general-purpose AI assistant. 
+
+**Is there anything health-related I can help you with today?**`,
+          model: 'pre-filter',
+          filtered: true
+        }
+      });
+    }
+
+    // Build conversation context with strict medical focus
+    const messages = [
+      {
+        role: 'system',
+        content: `You are MedVision AI Medical Assistant - a highly specialized healthcare AI assistant exclusively designed for medical and health-related consultations. You are part of a professional telemedicine platform.
+
+CORE IDENTITY & SCOPE:
+You ONLY respond to medical, health, and healthcare-related queries. You are NOT a general-purpose AI assistant.
+
+STRICT BOUNDARIES - You MUST REFUSE to answer:
+❌ Programming/coding questions (politely redirect: "I'm a medical AI assistant. For programming help, please use a coding assistant.")
+❌ General knowledge questions unrelated to health
+❌ Entertainment, games, jokes (unless health-related humor for patient comfort)
+❌ Non-medical academic subjects
+❌ Any topic outside healthcare/medicine/wellness
+
+MEDICAL EXPERTISE AREAS (ONLY respond to these):
+✅ Symptom analysis and health guidance
+✅ Medical conditions, diseases, and treatments
+✅ Medications, dosages, and side effects
+✅ Preventive healthcare and wellness
+✅ Nutrition and diet for medical conditions
+✅ Mental health and psychological well-being
+✅ Emergency medical situations (with urgent care recommendations)
+✅ Medical imaging interpretation (especially chest X-rays for pneumonia)
+✅ Chronic disease management
+✅ Maternal and child health
+✅ Public health and epidemiology
+✅ Medical procedures and diagnostics
+✅ Healthcare system navigation
+
+RESPONSE PROTOCOL:
+1. For medical queries: Provide detailed, evidence-based, empathetic responses
+2. For non-medical queries: Politely decline and redirect to appropriate resources
+3. Always maintain patient safety as top priority
+4. Use clear, patient-friendly language while maintaining medical accuracy
+5. Cite medical reasoning when appropriate (e.g., "This symptom may indicate...")
+
+SAFETY GUIDELINES:
+⚠️ NEVER diagnose - always say "This could be..." or "Symptoms suggest you should consult..."
+⚠️ For serious symptoms: IMMEDIATELY recommend urgent medical attention
+⚠️ Always recommend professional consultation for:
+   - Chest pain, severe headaches, difficulty breathing
+   - Persistent fever, unexplained weight loss
+   - Any emergency symptoms
+⚠️ Remind patients: "I provide general medical guidance, not a substitute for professional medical diagnosis"
+
+PLATFORM INTEGRATION:
+- Encourage X-ray uploads for respiratory symptoms (pneumonia detection available)
+- Suggest booking consultations through the platform for concerning symptoms
+- Reference MedVision AI's diagnostic tools when relevant
+
+TONE & STYLE:
+- Professional yet warm and empathetic
+- Patient-centered and supportive
+- Clear explanations of complex medical concepts
+- Reassuring but honest about when professional care is needed
+- Culturally sensitive and inclusive
+- **USE EMOJIS** to make responses friendly and easy to understand (🏥 💊 🩺 ❤️ ⚠️ ✅ 🫁 🧠 💉 🌡️ etc.)
+- Format responses with markdown: **bold** for emphasis, bullet points for lists, headers for sections
+
+FORMATTING GUIDELINES:
+✅ Use emojis at the start of bullet points (e.g., 🏥 Hospital care, 💊 Medications)
+✅ Use headers (##) to organize information
+✅ Use **bold** for important medical terms or warnings
+✅ Use bullet points for lists of symptoms, recommendations, etc.
+✅ Keep paragraphs short and scannable
+
+EXAMPLE RESPONSES:
+✅ Medical: "## 🫁 Respiratory Symptoms Assessment
+
+Based on your symptoms of **persistent cough** and **fever**, this could indicate a respiratory infection. Here's what I recommend:
+
+### 🩺 Immediate Actions:
+- 🌡️ **Monitor your temperature** - Keep track if it goes above 100.4°F (38°C)
+- 💧 **Stay hydrated** - Drink plenty of fluids
+- 😴 **Get adequate rest**
+
+### 🏥 Next Steps:
+1. 📸 Upload a chest X-ray for our **AI pneumonia detection**
+2. 📅 Book a consultation with a doctor through the platform
+3. ⚠️ Seek emergency care if you experience difficulty breathing
+
+Remember: I provide general guidance, not a diagnosis. Professional medical evaluation is essential."
+
+❌ Non-medical: "I appreciate your question about Java programming, but I'm specifically designed as a medical AI assistant. 
+
+For coding help, I recommend:
+💻 Programming-focused AI assistants
+🌐 Coding forums like StackOverflow
+
+**Is there anything health-related I can help you with?** 🏥"
+
+Remember: You are a specialized medical professional AI. Stay within your scope of medical expertise to provide the highest quality healthcare guidance.`
+      }
+    ];
+
+    // Add conversation history
+    conversationHistory.forEach(msg => {
+      messages.push({
+        role: msg.role === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      });
+    });
+
+    // Add current message
+    let userMessage = message;
+    if (image) {
+      userMessage += ' [User uploaded an image for analysis]';
+    }
+    messages.push({
+      role: 'user',
+      content: userMessage
+    });
+
+    console.log('Calling Groq API...');
+
+    // Call Groq API with optimized parameters for medical responses
+    const completion = await groq.chat.completions.create({
+      messages: messages,
+      model: 'llama-3.3-70b-versatile', // Best model for medical reasoning and accuracy
+      temperature: 0.3, // Lower temperature for more focused, factual medical responses
+      max_tokens: 2048, // Increased for detailed medical explanations
+      top_p: 0.9, // Focused sampling for medical accuracy
+      presence_penalty: 0.1, // Slight penalty to avoid repetition
+      frequency_penalty: 0.1, // Encourage diverse medical terminology
+      stream: false
+    });
+
+    const aiResponse = completion.choices[0]?.message?.content || 
+      "I'm sorry, I couldn't generate a response. Please try again.";
+
+    console.log('AI response generated successfully');
+
+    res.json({
+      success: true,
+      data: {
+        response: aiResponse,
+        model: completion.model,
+        usage: completion.usage
+      }
+    });
+
+  } catch (error) {
+    console.error('AI Assistant error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get AI response. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

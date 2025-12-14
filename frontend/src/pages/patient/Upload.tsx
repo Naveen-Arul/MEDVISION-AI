@@ -52,12 +52,11 @@ const PatientUpload = () => {
       const response = await api.ai.analyzeImage(file);
       
       if (response.success && response.data) {
-        const aiResult = response.data.result;
         const diagnosisResult: DiagnosisResult = {
-          prediction: aiResult.diagnosis,
-          confidence: aiResult.confidence || 0,
-          severity: response.data.riskLevel === "normal" ? "low" : response.data.riskLevel || "low",
-          recommendation: aiResult.recommendations?.[0] || "No recommendation available",
+          prediction: response.data.prediction || "Unknown",
+          confidence: response.data.confidence || 0,
+          severity: response.data.riskLevel || "low",
+          recommendation: response.data.recommendations?.[0] || response.data.detailedAnalysis || "No recommendation available",
         };
         
         setResult(diagnosisResult);

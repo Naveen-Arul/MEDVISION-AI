@@ -49,8 +49,9 @@ const callPythonAIService = async (imagePath) => {
     const form = new FormData();
     form.append('file', imageData);
     
-    // Call Python AI Service - use environment variable or fallback
-    const aiServiceUrl = process.env.AI_SERVICE_URL || 'https://medvision-ai-d10f.onrender.com';
+    // Call Python AI Service - use environment variable or fallback to local development
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:5001';
+    console.log('Calling Python AI service at:', aiServiceUrl);
     const response = await axios.post(`${aiServiceUrl}/predict`, form, {
       headers: {
         ...form.getHeaders()
@@ -71,7 +72,9 @@ const callPythonAIService = async (imagePath) => {
       throw new Error(data.error || 'Python API returned failure');
     }
   } catch (error) {
-    console.error('Error calling Python API:', error.message);
+    console.error('❌ Error calling Python API:', error.message);
+    console.error('Full error:', error.response?.data || error);
+    console.error('AI Service URL:', process.env.AI_SERVICE_URL || 'http://localhost:5001');
     throw new Error('Failed to get prediction from Python service: ' + error.message);
   }
 };
@@ -95,7 +98,7 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
 
     const startTime = Date.now();
 
-    // Create analysis record
+    // Create analysis record with valid placeholder values
     analysisRecord = new AIAnalysis({
       user: req.user._id,
       analysisType: analysisType === 'chest_xray' ? 'pneumonia_detection' : analysisType,
@@ -107,10 +110,15 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
           mimetype: req.file.mimetype
         }
       },
-      status: 'processing'
+      status: 'processing',
+      results: {
+        prediction: 'Inconclusive', // Placeholder - will be updated after AI analysis
+        confidence: 0
+      }
     });
 
     await analysisRecord.save();
+    console.log('✅ Analysis record created:', analysisRecord._id);
 
     // Process image with Sharp for optimization
     const processedImagePath = path.join('uploads', `processed-${req.file.filename}`);
@@ -119,6 +127,8 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
       .jpeg({ quality: 90 })
       .toFile(processedImagePath);
 
+    console.log('✅ Image processed, calling Python AI service...');
+    
     // Perform AI analysis by calling Python service
     const aiResult = await callPythonAIService(processedImagePath);
 
@@ -161,7 +171,12 @@ router.post('/analyze', upload.single('file'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('AI analysis error:', error);
+    console.error('❌ AI analysis error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      file: req.file ? req.file.filename : 'none'
+    });
 
     // Update analysis record with error
     if (analysisRecord) {
